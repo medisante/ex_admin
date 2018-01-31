@@ -38,7 +38,7 @@ defmodule ExAdmin.Register do
   * `clear_action_items!` - Remove the action item buttons
   * `action_item` - Defines custom action items
   * `changesets` - Defines custom changeset functions
-
+  * `functions` - Defines custom create and update functions
   """
 
   if File.dir?("/tmp") do
@@ -118,6 +118,7 @@ defmodule ExAdmin.Register do
       Module.put_attribute(__MODULE__, :changesets, [])
       Module.put_attribute(__MODULE__, :update_changeset, :changeset)
       Module.put_attribute(__MODULE__, :create_changeset, :changeset)
+      Module.put_attribute(__MODULE__, :functions, [])
 
       @name_column Module.get_attribute(__MODULE__, :name_column) || apply(ExAdmin.Helpers, :get_name_field, [module])
 
@@ -210,7 +211,8 @@ defmodule ExAdmin.Register do
                 sidebars: sidebars,
                 scopes: scopes,
                 create_changeset: @create_changeset,
-                update_changeset: @update_changeset
+                update_changeset: @update_changeset,
+                functions: Module.get_attribute(__MODULE__, :functions)
 
       def run_query(repo, defn, action, id \\ nil) do
         %__MODULE__{}
@@ -484,6 +486,28 @@ defmodule ExAdmin.Register do
   defmacro changesets(opts) do
     quote location: :keep do
       Module.put_attribute(__MODULE__, :changesets, unquote(opts))
+    end
+  end
+
+  @doc """
+  Define custom functions for the `update` and `create` actions.
+
+  ## Examples
+
+      functions create: &__MODULE__.create/2,
+                update: &__MODULE__.update/2
+
+      def create(model, params) do
+      ...
+      end
+
+      def update(model, params) do
+      ...
+      end
+  """
+  defmacro functions(opts) do
+    quote location: :keep do
+      Module.put_attribute(__MODULE__, :functions, unquote(opts))
     end
   end
 

@@ -76,16 +76,23 @@ defmodule ExAdmin.AdminResourceController do
     model = defn.__struct__
     resource = conn.assigns.resource
 
-    changeset = defn.resource_model.changeset(resource, params[defn.resource_name])
-    #apply(defn.resource_model, defn.create_changeset, [resource, params[defn.resource_name]])
+    function = Keyword.get(defn.functions, :create)
+    status = cond do
+      function != nil ->
+        function.(resource, params[defn.resource_name])
+      true ->
+        changeset = defn.resource_model.changeset(resource, params[defn.resource_name])
+        #apply(defn.resource_model, defn.create_changeset, [resource, params[defn.resource_name]])
+        ExAdmin.Repo.insert(changeset)
+    end
 
-    case ExAdmin.Repo.insert(changeset) do
-      {:error, changeset} ->
-        conn |> handle_changeset_error(defn, changeset, params)
+    case status do
       {:ok, resource} ->
         {conn, _, resource} = handle_after_filter(conn, :create, defn, params, resource)
         put_flash(conn, :notice, (gettext "%{model_name} was successfully created.", model_name: (model |> base_name |> titleize) ))
         |> redirect(to: admin_resource_path(resource, :show))
+      {:error, changeset} ->
+        conn |> handle_changeset_error(defn, changeset, params)
     end
   end
 
@@ -177,6 +184,7 @@ defmodule ExAdmin.AdminResourceController do
     |> redirect(to: admin_resource_path(resource_model, :index))
   end
 
+  defp to_integer(Ecto.UUID, string), do: string
   defp to_integer(:id, string), do: string
   defp to_integer(:string, string), do: string
   defp to_integer(:integer, string) do
